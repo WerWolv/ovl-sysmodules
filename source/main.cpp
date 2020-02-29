@@ -1,3 +1,4 @@
+#define TESLA_INIT_IMPL
 #include <tesla.hpp>
 
 #include <fstream>
@@ -19,15 +20,14 @@ bool isProgramRunning(u64 programId) {
 class GuiMain : public tsl::Gui {
 public:
     GuiMain() { 
-        this->setTitle("Sysmodules");
-        this->setSubtitle("v1.0.0");
+
     }
     
     ~GuiMain() { }
 
-    virtual tsl::Element* createUI() {
-        tsl::element::Frame *rootFrame = new tsl::element::Frame();
-        tsl::element::List *sysmoduleList = new tsl::element::List();
+    virtual tsl::elm::Element* createUI() {
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Sysmodules", "v1.1.0");
+        tsl::elm::List *sysmoduleList = new tsl::elm::List();
 
         for (auto contentsFolder : std::filesystem::directory_iterator("sdmc:/atmosphere/contents")) {
             auto toolboxFile = contentsFolder.path() / "toolbox.json";
@@ -50,8 +50,8 @@ public:
 
                 if (contentsFolder.path().string().find(sysmoduleProgramIdString) != std::string::npos) {
 
-                    auto listEntry = new tsl::element::ToggleListItem(sysmoduleName, isProgramRunning(sysmoduleProgramId));
-                    listEntry->setStateChangeListener([listEntry, sysmoduleProgramId](bool state) -> bool {
+                    auto listEntry = new tsl::elm::ToggleListItem(sysmoduleName, isProgramRunning(sysmoduleProgramId));
+                    listEntry->setStateChangedListener([listEntry, sysmoduleProgramId](bool state) -> bool {
                         if (!isProgramRunning(sysmoduleProgramId)) {
                             const NcmProgramLocation programLocation {
                                 .program_id = sysmoduleProgramId,
@@ -75,16 +75,20 @@ public:
             }
         }
 
+
         if (this->m_sysmoduleListItems.size() == 0) {
-            auto warning = new tsl::element::CustomDrawer(0, 0, 100, FB_WIDTH, [](u16 x, u16 y, tsl::Screen *screen){
-                screen->drawString("\uE150", false, 180, 250, 90, tsl::a(0xFFFF));
-                screen->drawString("No sysmodules found!", false, 110, 340, 25, tsl::a(0xFFFF));
+            auto warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h){
+                renderer->drawString("\uE150", false, 180, 250, 90, renderer->a(0xFFFF));
+                renderer->drawString("No sysmodules found!", false, 110, 340, 25, renderer->a(0xFFFF));
             });
 
-            rootFrame->addElement(warning);
+            delete sysmoduleList;
+
+            rootFrame->setContent(warning);
+        } else {
+            rootFrame->setContent(sysmoduleList);
         }
 
-        rootFrame->addElement(sysmoduleList);
 
         return rootFrame;
     }
@@ -100,31 +104,31 @@ public:
     }
 
 private:
-    std::map<u64, tsl::element::ToggleListItem*> m_sysmoduleListItems;
+    std::map<u64, tsl::elm::ToggleListItem*> m_sysmoduleListItems;
 
 };
 
 
-class TemplateOverlay : public tsl::Overlay {
+class OverlaySysmodules : public tsl::Overlay {
 public:
-    TemplateOverlay() { }
-    ~TemplateOverlay() { }
+    OverlaySysmodules() { }
+    ~OverlaySysmodules() { }
     
-    tsl::Gui* onSetup() { 
-        smInitialize();
+    void initServices() override { 
         pmshellInitialize();
-        smExit();
-
-        return new GuiMain();
     }
 
-    void onDestroy() {
+    void exitServices() override {
         pmshellExit();
     }
 
+    std::unique_ptr<tsl::Gui> loadInitialGui() override {
+        return initially<GuiMain>();
+    }
+
 };
 
 
-tsl::Overlay *overlayLoad() {
-    return new TemplateOverlay();
+int main(int argc, char **argv) {
+    return tsl::loop<OverlaySysmodules>(argc, argv);
 }
