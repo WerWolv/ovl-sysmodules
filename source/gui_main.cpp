@@ -112,7 +112,7 @@ GuiMain::~GuiMain() {
 }
 
 tsl::elm::Element *GuiMain::createUI() {
-    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Sysmodules", "v1.1.0");
+    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Sysmodules", VERSION);
 
     if (this->m_sysmoduleListItems.size() == 0) {
         const char *description = this->m_scanned ? "No sysmodules found!" : "Scan failed!";

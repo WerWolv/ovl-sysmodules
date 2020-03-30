@@ -14,7 +14,8 @@
             "defines": [
                 "SWITCH",
                 "__SWITCH__",
-                "__aarch64__"
+                "__aarch64__",
+                "VERSION=\"\""
             ],
             "compilerPath": "C:/devkitPro/devkitA64/bin/aarch64-none-elf-g++",
             "cStandard": "c11",
@@ -36,7 +37,8 @@
             "defines": [
                 "SWITCH",
                 "__SWITCH__",
-                "__aarch64__"
+                "__aarch64__",
+                "VERSION=\"\""
             ],
             "compilerPath": "/opt/devkitpro/devkitA64/bin/aarch64-none-elf-g++",
             "cStandard": "c11",
