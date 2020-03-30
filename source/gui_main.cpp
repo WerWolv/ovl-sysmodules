@@ -12,12 +12,12 @@ static char pathBuffer[FS_MAX_PATH];
 
 constexpr const char *const descriptions[2][2] = {
     [0] = {
-        [0] = "Disabled",
-        [1] = "Off/Enabled",
+        [0] = "Off | \uE098",
+        [1] = "Off | \uE0F4",
     },
     [1] = {
-        [0] = "On/Disabled",
-        [1] = "Enabled",
+        [0] = "On | \uE098",
+        [1] = "On | \uE0F4",
     },
 };
 
@@ -117,7 +117,7 @@ tsl::elm::Element *GuiMain::createUI() {
     if (this->m_sysmoduleListItems.size() == 0) {
         const char *description = this->m_scanned ? "No sysmodules found!" : "Scan failed!";
 
-        auto *warning = new tsl::elm::CustomDrawer([description](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h) {
+        auto *warning = new tsl::elm::CustomDrawer([description](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150", false, 180, 250, 90, renderer->a(0xFFFF));
             renderer->drawString(description, false, 110, 340, 25, renderer->a(0xFFFF));
         });
@@ -125,13 +125,19 @@ tsl::elm::Element *GuiMain::createUI() {
         rootFrame->setContent(warning);
     } else {
         tsl::elm::List *sysmoduleList = new tsl::elm::List();
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Rebootless  \uE0E0  Start/Stop  \uE0E3  Set/Remove Flag"));
+        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Dynamic  |  \uE0E0  Toggle  |  \uE0E3  Toggle auto start", true));
+        sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString("\uE016  These sysmodules can be toggled at any time.", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        }), 30);
         for (const auto &module : this->m_sysmoduleListItems) {
             if (!module.needReboot)
                 sysmoduleList->addItem(module.listItem);
         }
 
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Need reboot!  \uE0E3  Set/Remove Flag"));
+        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Static  |  \uE0E3  Toggle auto start", true));
+        sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString("\uE016  These sysmodules need a reboot to work.", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        }), 30);
         for (const auto &module : this->m_sysmoduleListItems) {
             if (module.needReboot)
                 sysmoduleList->addItem(module.listItem);
