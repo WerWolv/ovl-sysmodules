@@ -39,7 +39,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:=	Sysmodules
 
-TARGET		:=	$(notdir $(CURDIR))
+TARGET		:=	ovlSysmodules
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
