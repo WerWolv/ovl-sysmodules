@@ -62,7 +62,7 @@ GuiMain::GuiMain() {
         u64 sysmoduleProgramId = std::strtoul(sysmoduleProgramIdString.c_str(), nullptr, 16);
 
         /* Let's not allow Tesla to be killed with this. */
-        if (sysmoduleProgramId == 0x010000000007E51AULL)
+        if (sysmoduleProgramId == 0x420000000007E51AULL)
             continue;
 
         SystemModule module = {
