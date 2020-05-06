@@ -26,4 +26,5 @@ class GuiMain : public tsl::Gui {
     void updateStatus(const SystemModule &module);
     bool hasFlag(const SystemModule &module);
     bool isRunning(const SystemModule &module);
+
 };

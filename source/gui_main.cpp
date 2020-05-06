@@ -4,9 +4,9 @@
 
 #include <json.hpp>
 using json = nlohmann::json;
-
-constexpr const char *const amsContentsPath = "/atmosphere/contents";
-constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
+      char * contentsPath;
+	  char * boot2FlagFormat;
+	  char * toolboxJsonPath;
 
 static char pathBuffer[FS_MAX_PATH];
 
@@ -21,13 +21,40 @@ constexpr const char *const descriptions[2][2] = {
     },
 };
 
+bool isServiceRunning(const char *serviceName) {
+  Handle handle;
+  SmServiceName service_name = smEncodeName(serviceName);
+  bool running = R_FAILED(smRegisterService(&handle, service_name, false, 1));
+
+  svcCloseHandle(handle);
+
+  if (!running)
+    smUnregisterService(service_name);
+
+  return running;
+}
+
+void checkCfwPath() {
+ if (isServiceRunning("rnx")) {
+    contentsPath = "/ReiNX/contents";
+	boot2FlagFormat = "/ReiNX/contents/%016lX/flags/boot2.flag";
+	toolboxJsonPath = "/ReiNX/contents/%s/toolbox.json";
+}
+  else {
+     contentsPath = "/atmosphere/contents";
+	 boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
+	 toolboxJsonPath = "/atmosphere/contents/%s/toolbox.json";
+  }
+}
+
 GuiMain::GuiMain() {
+ checkCfwPath();
     Result rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc))
         return;
 
     FsDir contentDir;
-    std::strcpy(pathBuffer, amsContentsPath);
+    std::strcpy(pathBuffer, contentsPath);
     rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
     if (R_FAILED(rc))
         return;
@@ -36,7 +63,7 @@ GuiMain::GuiMain() {
     /* Iterate over contents folder. */
     for (const auto &entry : FsDirIterator(contentDir)) {
         FsFile toolboxFile;
-        std::snprintf(pathBuffer, FS_MAX_PATH, "/atmosphere/contents/%s/toolbox.json", entry.name);
+        std::snprintf(pathBuffer, FS_MAX_PATH, toolboxJsonPath, entry.name);
         rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &toolboxFile);
         if (R_FAILED(rc))
             continue;
