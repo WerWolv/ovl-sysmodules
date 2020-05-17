@@ -37,10 +37,10 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
-APP_TITLE	:=	Sysmodules
-APP_VERSION	:=	1.2.1
+APP_TITLE	:=	Training Modpack
+APP_VERSION	:=	2.0
 
-TARGET		:=	ovlSysmodules
+TARGET		:=	ovlTrainingModpack
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data

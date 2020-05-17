@@ -1,148 +1,196 @@
 #include "gui_main.hpp"
+#include "taunt_toggles.h"
 
-#include "dir_iterator.hpp"
+u64 pidSmash = 0;
+static const char* SYSTEM_SETTINGS_FILE = "/atmosphere/config/system_settings.ini";
+static const char* TRAINING_MOD_LOG = "/TrainingModpack/training_modpack.log";
+static const char* TRAINING_MOD_CONF = "/TrainingModpack/training_modpack_menu.conf";
 
-#include <json.hpp>
-using json = nlohmann::json;
+static tsl::hlp::ini::IniData readSettings() {
+    /* Open Sd card filesystem. */
+    FsFileSystem fsSdmc;
+    if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
+        return {};
+    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fsSdmc); });
 
-constexpr const char *const amsContentsPath = "/atmosphere/contents";
-constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
+    /* Open config file. */
+    FsFile fileConfig;
+    if (R_FAILED(fsFsOpenFile(&fsSdmc, SYSTEM_SETTINGS_FILE, FsOpenMode_Read, &fileConfig)))
+        return {};
+    tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&fileConfig); });
 
-static char pathBuffer[FS_MAX_PATH];
+    /* Get config file size. */
+    s64 configFileSize;
+    if (R_FAILED(fsFileGetSize(&fileConfig, &configFileSize)))
+        return {};
 
-constexpr const char *const descriptions[2][2] = {
-    [0] = {
-        [0] = "Off | \uE098",
-        [1] = "Off | \uE0F4",
-    },
-    [1] = {
-        [0] = "On | \uE098",
-        [1] = "On | \uE0F4",
-    },
-};
+    /* Read and parse config file. */
+    std::string configFileData(configFileSize, '\0');
+    u64 readSize;
+    Result rc = fsFileRead(&fileConfig, 0, configFileData.data(), configFileSize, FsReadOption_None, &readSize);
+    if (R_FAILED(rc) || readSize != static_cast<u64>(configFileSize))
+        return {};
+
+    return tsl::hlp::ini::parseIni(configFileData);
+}
+
+static void writeSettings(tsl::hlp::ini::IniData const &iniData) {
+    /* Open Sd card filesystem. */
+    FsFileSystem fsSdmc;
+    if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
+        return;
+    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fsSdmc); });
+
+    std::string iniString = tsl::hlp::ini::unparseIni(iniData);
+
+    fsFsDeleteFile(&fsSdmc, SYSTEM_SETTINGS_FILE);
+    fsFsCreateFile(&fsSdmc, SYSTEM_SETTINGS_FILE, iniString.length(), 0);
+
+    /* Open config file. */
+    FsFile fileConfig;
+    if (R_FAILED(fsFsOpenFile(&fsSdmc, SYSTEM_SETTINGS_FILE, FsOpenMode_Write, &fileConfig)))
+        return;
+    tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&fileConfig); });
+
+    fsFileWrite(&fileConfig, 0, iniString.c_str(), iniString.length(), FsWriteOption_Flush);
+}
+
+static void updateSettings(tsl::hlp::ini::IniData const &changes) {
+    tsl::hlp::ini::IniData iniData = readSettings();
+    for (auto &section : changes) {
+        for (auto &keyValue : section.second) {
+            iniData[section.first][keyValue.first] = keyValue.second;
+        }
+    }
+    writeSettings(iniData);
+}
 
 GuiMain::GuiMain() {
+    smInitialize();
+    pminfoInitialize();
+    pmbmInitialize();
+    smExit();
+
+    pmdmntGetProcessId(&pidSmash, 0x01006A800016E000);
+
     Result rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc))
         return;
 
-    FsDir contentDir;
-    std::strcpy(pathBuffer, amsContentsPath);
-    rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
+    FsFile menuFile;
+    rc = fsFsOpenFile(&this->m_fs, TRAINING_MOD_CONF, FsOpenMode_Read, &menuFile);
     if (R_FAILED(rc))
         return;
-    tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
 
-    /* Iterate over contents folder. */
-    for (const auto &entry : FsDirIterator(contentDir)) {
-        FsFile toolboxFile;
-        std::snprintf(pathBuffer, FS_MAX_PATH, "/atmosphere/contents/%s/toolbox.json", entry.name);
-        rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &toolboxFile);
-        if (R_FAILED(rc))
-            continue;
-        tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&toolboxFile); });
-
-        /* Get toolbox file size. */
-        s64 size;
-        rc = fsFileGetSize(&toolboxFile, &size);
-        if (R_FAILED(rc))
-            continue;
-
-        /* Read toolbox file. */
-        std::string toolBoxData(size, '\0');
-        u64 bytesRead;
-        rc = fsFileRead(&toolboxFile, 0, toolBoxData.data(), size, FsReadOption_None, &bytesRead);
-        if (R_FAILED(rc))
-            continue;
-
-        /* Parse toolbox file data. */
-        json toolboxFileContent = json::parse(toolBoxData);
-
-        const std::string &sysmoduleProgramIdString = toolboxFileContent["tid"];
-        u64 sysmoduleProgramId = std::strtoul(sysmoduleProgramIdString.c_str(), nullptr, 16);
-
-        /* Let's not allow Tesla to be killed with this. */
-        if (sysmoduleProgramId == 0x420000000007E51AULL)
-            continue;
-
-        SystemModule module = {
-            .listItem = new tsl::elm::ListItem(toolboxFileContent["name"]),
-            .programId = sysmoduleProgramId,
-            .needReboot = toolboxFileContent["requires_reboot"],
-        };
-
-        module.listItem->setClickListener([this, module](u64 click) -> bool {
-            if (click & KEY_A && !module.needReboot) {
-                if (this->isRunning(module)) {
-                    /* Kill process. */
-                    pmshellTerminateProgram(module.programId);
-                } else {
-                    /* Start process. */
-                    const NcmProgramLocation programLocation{
-                        .program_id = module.programId,
-                        .storageID = NcmStorageId_None,
-                    };
-                    u64 pid = 0;
-                    pmshellLaunchProgram(0, &programLocation, &pid);
-                }
-                return true;
-            }
-
-            if (click & KEY_Y) {
-                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
-                if (this->hasFlag(module)) {
-                    /* Remove boot2 flag file. */
-                    fsFsDeleteFile(&this->m_fs, pathBuffer);
-                } else {
-                    /* Create boot2 flag file. */
-                    fsFsCreateFile(&this->m_fs, pathBuffer, 0, FsCreateOption(0));
-                }
-                return true;
-            }
-
-            return false;
-        });
-        this->m_sysmoduleListItems.push_back(std::move(module));
+    u64 bytesRead;
+    rc = fsFileRead(&menuFile, 0, static_cast<void *>(&menu), sizeof(menu), FsReadOption_None, &bytesRead);
+    if (R_FAILED(rc)) {
+        fsFileWrite(&menuFile, 0, static_cast<void *>(&menu), sizeof(menu), FsOpenMode_Write);
     }
-    this->m_scanned = true;
+
+    fsFileClose(&menuFile);
 }
 
 GuiMain::~GuiMain() {
-    fsFsClose(&this->m_fs);
+    smInitialize();
+    pminfoExit();
+    pmbmExit();
+    smExit();
 }
 
 tsl::elm::Element *GuiMain::createUI() {
-    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Sysmodules", VERSION);
+    char buffer[256];
+    snprintf(buffer, 256, "Version %s", VERSION);
+    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Training Modpack", buffer);
 
-    if (this->m_sysmoduleListItems.size() == 0) {
-        const char *description = this->m_scanned ? "No sysmodules found!" : "Scan failed!";
+    auto list = new tsl::elm::List();
 
-        auto *warning = new tsl::elm::CustomDrawer([description](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE150", false, 180, 250, 90, renderer->a(0xFFFF));
-            renderer->drawString(description, false, 110, 340, 25, renderer->a(0xFFFF));
+    Result rc;
+    Handle debug;
+
+    tsl::hlp::ini::IniData iniData = readSettings();
+    bool ease_nro_restriction = false;
+    for (auto &section : iniData) {
+        for (auto &keyValue : section.second) {
+            if (section.first == "ro") {
+                if (keyValue.first == "ease_nro_restriction") {
+                    ease_nro_restriction = (readSettings()["ro"]["ease_nro_restriction"] == "u8!0x1");
+                }
+            }
+        }
+    }
+
+    if (!ease_nro_restriction) {
+        tsl::elm::Element *iniShow = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h) {
+            renderer->drawString(
+                "Your config file did not have the \nproper configuration to run the \nTraining Modpack.\n\n\nIt has been automatically \nupdated.\n- atmosphere\n---- config\n-------- system_settings.ini\n\n(enable ease_nro_restriction)\n\n\nPlease reboot your Switch.", 
+                false, 50, 225, 20, tsl::Color(255, 255, 255, 255));
+        });
+
+        updateSettings({
+                { "ro", {
+                    { "ease_nro_restriction", "u8!0x1" }
+                }}
+            });
+
+        rootFrame->setContent(iniShow);
+        return rootFrame;
+    }
+
+    if (pidSmash != 0) {
+        rc = svcDebugActiveProcess(&debug, pidSmash);
+        if (R_SUCCEEDED(rc)) {
+          svcCloseHandle(debug);
+
+          ValueListItem *hitboxItem = new ValueListItem("Hitbox Visualization", hitbox_items, menu.HITBOX_VIS, "hitbox");
+          list->addItem(hitboxItem);
+          valueListItems.push_back(hitboxItem);
+
+          ValueListItem *shieldItem = new ValueListItem("Shield Options", shield_items, menu.SHIELD_STATE, "shield");
+          list->addItem(shieldItem);
+          valueListItems.push_back(shieldItem);
+
+          ValueListItem *mashItem = new ValueListItem("Mash Toggles", mash_items, menu.MASH_STATE, "mash");
+          list->addItem(mashItem);
+          valueListItems.push_back(mashItem);
+
+          ValueListItem *attackItem = new ValueListItem("Attack Toggles", attack_items, menu.ATTACK_STATE, "attack");
+          list->addItem(attackItem);
+          valueListItems.push_back(attackItem);
+
+          ValueListItem *ledgeItem = new ValueListItem("Ledge Option", ledge_items, menu.LEDGE_STATE, "ledge");
+          list->addItem(ledgeItem);
+          valueListItems.push_back(ledgeItem);
+
+          ValueListItem *techItem = new ValueListItem("Tech Options", tech_items, menu.TECH_STATE, "tech");
+          list->addItem(techItem);
+          valueListItems.push_back(techItem);
+
+          ValueListItem *defensiveItem = new ValueListItem("Defensive Options", defensive_items, menu.DEFENSIVE_STATE, "defensive");
+          list->addItem(defensiveItem);
+          valueListItems.push_back(defensiveItem);
+
+          ValueListItem *diItem = new ValueListItem("Set DI", di_items, menu.DI_STATE, "di");
+          list->addItem(diItem);
+          valueListItems.push_back(diItem);
+
+          rootFrame->setContent(list);
+        }
+        else {
+          tsl::elm::Element *warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h) {
+            renderer->drawString("\uE150", false, 180, 250, 90, tsl::Color(255, 255, 255, 255));
+            renderer->drawString("Could not debug process memory", false, 110, 340, 25, tsl::Color(255, 255, 255, 255));
+          });
+
+          rootFrame->setContent(warning);
+        }
+    } else {
+        tsl::elm::Element *warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h) {
+            renderer->drawString("\uE150", false, 180, 250, 90, tsl::Color(255, 255, 255, 255));
+            renderer->drawString("Smash not running.", false, 110, 340, 25, tsl::Color(255, 255, 255, 255));
         });
 
         rootFrame->setContent(warning);
-    } else {
-        tsl::elm::List *sysmoduleList = new tsl::elm::List();
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Dynamic  |  \uE0E0  Toggle  |  \uE0E3  Toggle auto start", true));
-        sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE016  These sysmodules can be toggled at any time.", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
-        }), 30);
-        for (const auto &module : this->m_sysmoduleListItems) {
-            if (!module.needReboot)
-                sysmoduleList->addItem(module.listItem);
-        }
-
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Static  |  \uE0E3  Toggle auto start", true));
-        sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE016  These sysmodules need a reboot to work.", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
-        }), 30);
-        for (const auto &module : this->m_sysmoduleListItems) {
-            if (module.needReboot)
-                sysmoduleList->addItem(module.listItem);
-        }
-        rootFrame->setContent(sysmoduleList);
     }
 
     return rootFrame;
@@ -154,35 +202,69 @@ void GuiMain::update() {
     if (counter++ % 20 != 0)
         return;
 
-    for (const auto &module : this->m_sysmoduleListItems) {
-        this->updateStatus(module);
+    applyChanges();
+}
+
+void GuiMain::applyChanges() {
+    for (ValueListItem *item : valueListItems) {
+        int value = item->getCurValue();
+        std::string extData = item->getExtData();
+        if (extData == "hitbox") menu.HITBOX_VIS = value;
+        if (extData == "shield") menu.SHIELD_STATE = value;
+        if (extData == "mash") menu.MASH_STATE = value;
+        if (extData == "attack") menu.ATTACK_STATE = value;
+        if (extData == "ledge") menu.LEDGE_STATE = value;
+        if (extData == "tech") menu.TECH_STATE = value;
+        if (extData == "defensive") menu.DEFENSIVE_STATE = value;
+        if (extData == "di") menu.DI_STATE = value;
     }
-}
+    Result rc;
+    Handle debug;
 
-void GuiMain::updateStatus(const SystemModule &module) {
-    bool running = this->isRunning(module);
-    bool hasFlag = this->hasFlag(module);
+    if (pidSmash != 0) {
+        rc = svcDebugActiveProcess(&debug, pidSmash);
+        if (R_SUCCEEDED(rc)) {
+            u64 menu_addr = 0;
+            FsFile menuAddrFile;
+            rc = fsFsOpenFile(&this->m_fs, TRAINING_MOD_LOG, FsOpenMode_Read, &menuAddrFile);
+            if (R_FAILED(rc)) {
+                svcCloseHandle(debug);
+                return;
+            }
 
-    const char *desc = descriptions[running][hasFlag];
-    module.listItem->setValue(desc);
-}
+            char buffer[100];
+            u64 bytesRead;
+            rc = fsFileRead(&menuAddrFile, 0, buffer, 100, FsReadOption_None, &bytesRead);
+            if (R_FAILED(rc)) {
+                svcCloseHandle(debug);
+                return;
+            }
 
-bool GuiMain::hasFlag(const SystemModule &module) {
-    FsFile flagFile;
-    std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
-    Result rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &flagFile);
-    if (R_SUCCEEDED(rc)) {
-        fsFileClose(&flagFile);
-        return true;
-    } else {
-        return false;
+            fsFileClose(&menuAddrFile);
+            buffer[bytesRead] = '\0';
+            menu_addr = strtoul(buffer, NULL, 16);
+
+            if (menu_addr != 0) {
+                rc = svcWriteDebugProcessMemory(debug, &menu, (u64)menu_addr, sizeof(menu));
+            }
+            svcCloseHandle(debug);
+        }
     }
-}
 
-bool GuiMain::isRunning(const SystemModule &module) {
-    u64 pid = 0;
-    if (R_FAILED(pmdmntGetProcessId(&pid, module.programId)))
-        return false;
+    FsFile menuFile;
+    fsFsCreateFile(&this->m_fs, TRAINING_MOD_CONF, sizeof(menu), 0);
 
-    return pid > 0;
+    rc = fsFsOpenFile(&this->m_fs, TRAINING_MOD_CONF, FsOpenMode_Write, &menuFile);
+    if (R_FAILED(rc)) {
+        fsFileClose(&menuFile);
+        return;
+    }
+
+    rc = fsFileWrite(&menuFile, 0, static_cast<void *>(&menu), sizeof(menu), FsOpenMode_Write);
+    if (R_FAILED(rc)) {
+        fsFileClose(&menuFile);
+        return;
+    }
+
+    fsFileClose(&menuFile);
 }
