@@ -68,7 +68,7 @@ GuiSublist::~GuiSublist() {
 }
 
 tsl::elm::Element *GuiSublist::createUI() {
-    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(title, "");
+    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(title, "Select from the options below.");
 
     auto list = new tsl::elm::List();
 

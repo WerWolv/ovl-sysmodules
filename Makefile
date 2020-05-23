@@ -47,7 +47,7 @@ DATA		:=	data
 INCLUDES	:=	include libs/libtesla/include
 
 ifeq ($(RELEASE),)
-	APP_VERSION	:=	$(APP_VERSION)-$(shell git describe --dirty --always)
+	APP_VERSION	:=	$(APP_VERSION)
 endif
 
 NO_ICON		:=  1
