@@ -1,10 +1,10 @@
 #define TESLA_INIT_IMPL
 #include "gui_main.hpp"
 
-class OverlaySysmodules : public tsl::Overlay {
+class TrainingModpackOverlay : public tsl::Overlay {
   public:
-    OverlaySysmodules() {}
-    ~OverlaySysmodules() {}
+    TrainingModpackOverlay() {}
+    ~TrainingModpackOverlay() {}
 
     void initServices() override {
         pmshellInitialize();
@@ -20,5 +20,5 @@ class OverlaySysmodules : public tsl::Overlay {
 };
 
 int main(int argc, char **argv) {
-    return tsl::loop<OverlaySysmodules>(argc, argv);
+    return tsl::loop<TrainingModpackOverlay>(argc, argv);
 }

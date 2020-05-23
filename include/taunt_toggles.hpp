@@ -1,5 +1,4 @@
-#ifndef TAUNT_TOGGLES_H
-#define TAUNT_TOGGLES_H
+#pragma once
 
 #define NONE 0
 
@@ -14,7 +13,6 @@
 */
 
 /* DI */
-int DI_STATE = NONE;
 #define DI_RANDOM_IN_AWAY 9
 const std::vector<std::string> di_items{"None", "Out", "Up Out", "Up", "Up In", "In", "Down In", "Down", "Down Out", "Random"};
 
@@ -70,17 +68,3 @@ const std::vector<std::string> defensive_items{"None", "Random", "Spotdodge", "R
 
 // Hitbox visualization
 const std::vector<std::string> hitbox_items{"Off", "On"};
-
-struct TrainingModpackMenu
-{
-  bool HITBOX_VIS = true;
-  int DI_STATE = NONE;
-  int ATTACK_STATE = MASH_NAIR;
-  int LEDGE_STATE = RANDOM_LEDGE;
-  int TECH_STATE = RANDOM_TECH;
-  int MASH_STATE = NONE;
-  int SHIELD_STATE = NONE;
-  int DEFENSIVE_STATE = RANDOM_DEFENSIVE;
-} menu;
-
-#endif // TAUNT_TOGGLES_H
