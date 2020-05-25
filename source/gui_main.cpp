@@ -1,6 +1,9 @@
 #include <tesla.hpp>
 #include "gui_main.hpp"
 #include "gui_sublist.hpp"
+#include "gui_help.hpp"
+#include "value_list_item.hpp"
+#include "clickable_list_item.hpp"
 #include "taunt_toggles.hpp"
 
 struct TrainingModpackMenu
@@ -156,43 +159,100 @@ tsl::elm::Element *GuiMain::createUI() {
         if (R_SUCCEEDED(rc)) {
           svcCloseHandle(debug);
 
-          ValueListItem *hitboxItem = new ValueListItem("Hitbox Visualization", hitbox_items, &menu.HITBOX_VIS, "hitbox");
+          ValueListItem *hitboxItem = new ValueListItem(
+              "Hitbox Visualization", 
+              hitbox_items, 
+              &menu.HITBOX_VIS, 
+              "hitbox",
+              hitbox_help);
           list->addItem(hitboxItem);
           valueListItems.push_back(hitboxItem);
 
-          ValueListItem *shieldItem = new ValueListItem("Shield Options", shield_items, &menu.SHIELD_STATE, "shield");
+          ValueListItem *shieldItem = new ValueListItem(
+              "Shield Options", 
+              shield_items, 
+              &menu.SHIELD_STATE, 
+              "shield",
+              shield_help);
           list->addItem(shieldItem);
           valueListItems.push_back(shieldItem);
 
-          ValueListItem *mashItem = new ValueListItem("Mash Toggles", mash_items, &menu.MASH_STATE, "mash");
+          ValueListItem *mashItem = new ValueListItem(
+              "Mash Toggles", 
+              mash_items, 
+              &menu.MASH_STATE, 
+              "mash",
+              mash_help);
           list->addItem(mashItem);
           valueListItems.push_back(mashItem);
 
-          ValueListItem *attackItem = new ValueListItem("Attack Toggles", attack_items, &menu.ATTACK_STATE, "attack");
+          ValueListItem *attackItem = new ValueListItem(
+              "Attack Toggles", 
+              attack_items, 
+              &menu.ATTACK_STATE, 
+              "attack",
+              attack_help);
           list->addItem(attackItem);
           valueListItems.push_back(attackItem);
 
-          ValueListItem *ledgeItem = new ValueListItem("Ledge Option", ledge_items, &menu.LEDGE_STATE, "ledge");
+          ValueListItem *ledgeItem = new ValueListItem(
+              "Ledge Option", 
+              ledge_items, 
+              &menu.LEDGE_STATE, 
+              "ledge",
+              ledge_help);
           list->addItem(ledgeItem);
           valueListItems.push_back(ledgeItem);
 
-          ValueListItem *techItem = new ValueListItem("Tech Options", tech_items, &menu.TECH_STATE, "tech");
+          ValueListItem *techItem = new ValueListItem(
+              "Tech Options", 
+              tech_items, 
+              &menu.TECH_STATE, 
+              "tech",
+              tech_help);
           list->addItem(techItem);
           valueListItems.push_back(techItem);
 
-          ValueListItem *defensiveItem = new ValueListItem("Defensive Options", defensive_items,& menu.DEFENSIVE_STATE, "defensive");
+          ValueListItem *defensiveItem = new ValueListItem(
+              "Defensive Options", 
+              defensive_items, 
+              &menu.DEFENSIVE_STATE, 
+              "defensive",
+              defensive_help);
           list->addItem(defensiveItem);
           valueListItems.push_back(defensiveItem);
 
-          ValueListItem *diItem = new ValueListItem("Set DI", di_items, &menu.DI_STATE, "di");
+          ValueListItem *diItem = new ValueListItem(
+              "Set DI", 
+              di_items, 
+              &menu.DI_STATE, 
+              "di",
+              di_help);
           list->addItem(diItem);
           valueListItems.push_back(diItem);
 
           for (auto valueListItem : valueListItems) {
-              valueListItem->setStateChangedListener([](std::vector<std::string> menuItems, int* val, std::string extData, std::string title) { 
-               tsl::changeTo<GuiSublist>(menuItems, val, extData, title);
+              valueListItem->setStateChangedListener([](std::vector<std::string> menuItems, int* val, std::string extData, std::string title, std::string help) { 
+               tsl::changeTo<GuiSublist>(menuItems, val, extData, title, help);
             });
           }
+
+          ClickableListItem *saveStateItem = new ClickableListItem(
+              "Save States", 
+              save_state_items,
+              nullptr,
+              "saveStates",
+              0,
+              "Save States",
+              save_states_help);
+          saveStateItem->setClickListener([] (
+              std::vector<std::string> values, int* curValue, std::string extdata, int index, std::string title, std::string help) {
+            tsl::changeTo<GuiHelp>(title, help);
+          });
+          saveStateItem->setHelpListener([] (std::string title, std::string help) {
+            tsl::changeTo<GuiHelp>(title, help);
+          });
+          list->addItem(saveStateItem);
 
           rootFrame->setContent(list);
         }

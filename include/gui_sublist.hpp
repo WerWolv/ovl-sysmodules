@@ -10,9 +10,10 @@ class GuiSublist : public tsl::Gui {
     int* index;
     std::string extData;
     std::string title;
+    std::string help;
 
   public:
-    GuiSublist(std::vector<std::string> menuItems, int* index, std::string extData, std::string title);
+    GuiSublist(std::vector<std::string> menuItems, int* index, std::string extData, std::string title, std::string help);
     ~GuiSublist();
 
     virtual tsl::elm::Element *createUI();
