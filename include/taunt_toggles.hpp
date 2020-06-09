@@ -17,7 +17,7 @@
 const std::vector<std::string> di_items{"None", "Out", "Up Out", "Up", "Up In", "In", "Down In", "Down", "Down Out", "Random"};
 const std::string di_help = R""""(
 Specified Direction
-CPUs DI in the direction specified 
+CPUs DI in the direction specified
 (relative to the player's facing
 position).
 
@@ -50,13 +50,13 @@ set to Attack.
 #define ATTACK_LEDGE 5
 const std::vector<std::string> ledge_items{"None", "Random", "Ntrl. Getup", "Roll", "Jump", "Attack"};
 const std::string ledge_help = R""""(
-CPUs will perform a ledge option. 
+CPUs will perform a ledge option.
 
-Specific ledge options can be 
+Specific ledge options can be
 chosen and include:
     Normal, roll, jump, and attack
 
-CPUs will also perform a defensive 
+CPUs will also perform a defensive
 option after getting up.
 )"""";
 
@@ -67,13 +67,13 @@ option after getting up.
 #define TECH_MISS 4
 const std::vector<std::string> tech_items{"None", "Random", "In-Place", "Roll", "Miss Tech"};
 const std::string tech_help = R""""(
-CPUs will perform a random 
-tech option. 
+CPUs will perform a random
+tech option.
 
 Specific tech options can be chosen and include:
     In place, roll, and miss tech
 
-CPUs will also perform a defensive 
+CPUs will also perform a defensive
 option after getting up.)"""";
 
 // Mash States
@@ -81,11 +81,13 @@ option after getting up.)"""";
 #define MASH_JUMP 2
 #define MASH_ATTACK 3
 #define MASH_SPOTDODGE 4
-#define MASH_RANDOM 5
-const std::vector<std::string> mash_items{"None", "Airdodge", "Jump", "Attack", "Spotdodge", "Random"};
+#define MASH_ROLL_F 5
+#define MASH_ROLL_B 6
+#define MASH_RANDOM 7
+const std::vector<std::string> mash_items{"None", "Airdodge", "Jump", "Attack", "Spotdodge", "Roll F", "Roll B", "Random"};
 const std::string mash_help = R""""(
-Use this toggle along with the Shield 
-Options toggle to practice moves on 
+Use this toggle along with the Shield
+Options toggle to practice moves on
 shield.
 
 CPUs will mash on the first frame out
@@ -93,7 +95,7 @@ of hitstun, out of specific states.
 
 Airdodge
 - Hitstun
-CPUs will also shield quickly if they 
+CPUs will also shield quickly if they
 are hit and remain grounded.
 
 Jump
@@ -113,13 +115,13 @@ Random
 #define SHIELD_HOLD 2
 const std::vector<std::string> shield_items{"None", "Infinite", "Hold"};
 const std::string shield_help = R""""(
-Use these toggles in conjunction 
+Use these toggles in conjunction
 with Mash toggles to practice
 moves on shield.
 
 Infinite
 CPUs will hold a shield that does
-not deteriorate over time or 
+not deteriorate over time or
 by damage.
 
 Hold
@@ -145,7 +147,7 @@ Specific options include:
 // Hitbox visualization
 const std::vector<std::string> hitbox_items{"Off", "On"};
 const std::string hitbox_help = R""""(
-Currently, hitboxes and 
+Currently, hitboxes and
 grabboxes are supported.
 
 Original move effects are
@@ -157,15 +159,15 @@ visualization is active.)"""";
 const std::vector<std::string> save_state_items{""};
 const std::string save_states_help = R""""(
 Press Grab + Down Taunt at any
-time to save the state of the 
-training mode for you and the 
+time to save the state of the
+training mode for you and the
 CPU.
 
 Press Grab + Up Taunt at any
 time to revert to a
 previously saved state.
 
-The following attributes 
+The following attributes
 are saved:
 - Percent
 - Position
