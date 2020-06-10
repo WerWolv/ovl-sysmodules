@@ -16,6 +16,7 @@ struct TrainingModpackMenu
   int MASH_STATE = NONE;
   int SHIELD_STATE = NONE;
   int DEFENSIVE_STATE = RANDOM_DEFENSIVE;
+  int OOS_OFFSET = 1;
 } menu;
 
 u64 pidSmash = 0;
@@ -230,6 +231,15 @@ tsl::elm::Element *GuiMain::createUI() {
               di_help);
           list->addItem(diItem);
           valueListItems.push_back(diItem);
+
+          ValueListItem *oosOffsetItem = new ValueListItem(
+              "OOS Offset",
+              oos_items,
+              &menu.OOS_OFFSET,
+              "oos",
+              oos_help);
+          list->addItem(oosOffsetItem);
+          valueListItems.push_back(oosOffsetItem);
 
           for (auto valueListItem : valueListItems) {
               valueListItem->setStateChangedListener([](std::vector<std::string> menuItems, int* val, std::string extData, std::string title, std::string help) { 

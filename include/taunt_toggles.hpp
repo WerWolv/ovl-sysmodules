@@ -172,3 +172,15 @@ are saved:
 - Percent
 - Position
 - Facing direction)"""";
+
+// OOS
+const std::vector<std::string> oos_items{"0","1","2","3","4","5","6","7","8","9"};
+const std::string oos_help = R""""(
+Option to delay oos options
+until a certain number of hits
+have connected.
+
+Consecutive hits that keep the
+CPU locked in shield stun
+between hits will count
+as a single hit.)"""";
