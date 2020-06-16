@@ -227,8 +227,8 @@ public:
         }
 	}
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (keysHeld & KEY_LSTICK) {
-			if (keysHeld & KEY_RSTICK) {
+        if (keysHeld & KEY_DLEFT) {
+			if (keysHeld & KEY_X) {
 				tsl::goBack();
                 tsl::hlp::requestForeground(true);
 				return true;
