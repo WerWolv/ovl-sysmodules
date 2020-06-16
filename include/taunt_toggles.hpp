@@ -184,3 +184,10 @@ Consecutive hits that keep the
 CPU locked in shield stun
 between hits will count
 as a single hit.)"""";
+
+// Mash in neutral
+const std::vector<std::string> mash_neutral_items{"Off", "On"};
+const std::string mash_neutral_help = R""""(
+Force mash options to
+always occur, not just
+out of specific states.)"""";

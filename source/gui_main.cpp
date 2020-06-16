@@ -8,7 +8,7 @@
 
 struct TrainingModpackMenu
 {
-  int HITBOX_VIS = 1;
+  int HITBOX_VIS = true;
   int DI_STATE = NONE;
   int ATTACK_STATE = MASH_NAIR;
   int LEDGE_STATE = RANDOM_LEDGE;
@@ -17,6 +17,7 @@ struct TrainingModpackMenu
   int SHIELD_STATE = NONE;
   int DEFENSIVE_STATE = RANDOM_DEFENSIVE;
   int OOS_OFFSET = 1;
+  int MASH_IN_NEUTRAL = false;
 } menu;
 
 u64 pidSmash = 0;
@@ -195,6 +196,15 @@ tsl::elm::Element *GuiMain::createUI() {
               attack_help);
           list->addItem(attackItem);
           valueListItems.push_back(attackItem);
+
+          ValueListItem *mashNeutralItem = new ValueListItem(
+              "Mash In Neutral", 
+              mash_neutral_items, 
+              &menu.MASH_IN_NEUTRAL, 
+              "mash_neutral",
+              mash_neutral_help);
+          list->addItem(mashNeutralItem);
+          valueListItems.push_back(mashNeutralItem);
 
           ValueListItem *ledgeItem = new ValueListItem(
               "Ledge Option", 
