@@ -6,7 +6,7 @@
 
 // Side Taunt
 
-// DI
+// DI / Left Stick
 /*
  0, 0.785398, 1.570796, 2.356194, -3.14159, -2.356194,  -1.570796, -0.785398
  0, pi/4,     pi/2,     3pi/4,    pi,       5pi/4,      3pi/2,     7pi/4
@@ -23,6 +23,19 @@ position).
 
 Random Direction
 CPUs DI randomly in or away.)"""";
+
+// Left Stick
+const std::string left_stick_help = R""""(
+Specified Direction
+CPUs left stick will be
+in the direction specified
+(relative to the player's facing
+position).
+
+Currently only used for
+- air dodge
+
+)"""";
 
 // Attack Option
 #define MASH_NAIR 0

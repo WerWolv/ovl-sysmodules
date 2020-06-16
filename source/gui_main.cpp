@@ -10,6 +10,7 @@ struct TrainingModpackMenu
 {
   int HITBOX_VIS = true;
   int DI_STATE = NONE;
+  int LEFT_STICK = NONE;
   int ATTACK_STATE = MASH_NAIR;
   int LEDGE_STATE = RANDOM_LEDGE;
   int TECH_STATE = RANDOM_TECH;
@@ -142,7 +143,7 @@ tsl::elm::Element *GuiMain::createUI() {
     if (!ease_nro_restriction) {
         tsl::elm::Element *iniShow = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h) {
             renderer->drawString(
-                "Your config file did not have the \nproper configuration to run the \nTraining Modpack.\n\n\nIt has been automatically \nupdated.\n- atmosphere\n---- config\n-------- system_settings.ini\n\n(enable ease_nro_restriction)\n\n\nPlease reboot your Switch.", 
+                "Your config file did not have the \nproper configuration to run the \nTraining Modpack.\n\n\nIt has been automatically \nupdated.\n- atmosphere\n---- config\n-------- system_settings.ini\n\n(enable ease_nro_restriction)\n\n\nPlease reboot your Switch.",
                 false, 50, 225, 20, tsl::Color(255, 255, 255, 255));
         });
 
@@ -162,85 +163,95 @@ tsl::elm::Element *GuiMain::createUI() {
           svcCloseHandle(debug);
 
           ValueListItem *hitboxItem = new ValueListItem(
-              "Hitbox Visualization", 
-              hitbox_items, 
-              &menu.HITBOX_VIS, 
+              "Hitbox Visualization",
+              hitbox_items,
+              &menu.HITBOX_VIS,
               "hitbox",
               hitbox_help);
           list->addItem(hitboxItem);
           valueListItems.push_back(hitboxItem);
 
           ValueListItem *shieldItem = new ValueListItem(
-              "Shield Options", 
-              shield_items, 
-              &menu.SHIELD_STATE, 
+              "Shield Options",
+              shield_items,
+              &menu.SHIELD_STATE,
               "shield",
               shield_help);
           list->addItem(shieldItem);
           valueListItems.push_back(shieldItem);
 
           ValueListItem *mashItem = new ValueListItem(
-              "Mash Toggles", 
-              mash_items, 
-              &menu.MASH_STATE, 
+              "Mash Toggles",
+              mash_items,
+              &menu.MASH_STATE,
               "mash",
               mash_help);
           list->addItem(mashItem);
           valueListItems.push_back(mashItem);
 
           ValueListItem *attackItem = new ValueListItem(
-              "Attack Toggles", 
-              attack_items, 
-              &menu.ATTACK_STATE, 
+              "Attack Toggles",
+              attack_items,
+              &menu.ATTACK_STATE,
               "attack",
               attack_help);
           list->addItem(attackItem);
           valueListItems.push_back(attackItem);
 
           ValueListItem *mashNeutralItem = new ValueListItem(
-              "Mash In Neutral", 
-              mash_neutral_items, 
-              &menu.MASH_IN_NEUTRAL, 
+              "Mash In Neutral",
+              mash_neutral_items,
+              &menu.MASH_IN_NEUTRAL,
               "mash_neutral",
               mash_neutral_help);
           list->addItem(mashNeutralItem);
           valueListItems.push_back(mashNeutralItem);
 
           ValueListItem *ledgeItem = new ValueListItem(
-              "Ledge Option", 
-              ledge_items, 
-              &menu.LEDGE_STATE, 
+              "Ledge Option",
+              ledge_items,
+              &menu.LEDGE_STATE,
               "ledge",
               ledge_help);
           list->addItem(ledgeItem);
           valueListItems.push_back(ledgeItem);
 
           ValueListItem *techItem = new ValueListItem(
-              "Tech Options", 
-              tech_items, 
-              &menu.TECH_STATE, 
+              "Tech Options",
+              tech_items,
+              &menu.TECH_STATE,
               "tech",
               tech_help);
           list->addItem(techItem);
           valueListItems.push_back(techItem);
 
           ValueListItem *defensiveItem = new ValueListItem(
-              "Defensive Options", 
-              defensive_items, 
-              &menu.DEFENSIVE_STATE, 
+              "Defensive Options",
+              defensive_items,
+              &menu.DEFENSIVE_STATE,
               "defensive",
               defensive_help);
           list->addItem(defensiveItem);
           valueListItems.push_back(defensiveItem);
 
           ValueListItem *diItem = new ValueListItem(
-              "Set DI", 
-              di_items, 
-              &menu.DI_STATE, 
+              "Set DI",
+              di_items,
+              &menu.DI_STATE,
               "di",
               di_help);
           list->addItem(diItem);
           valueListItems.push_back(diItem);
+
+
+          ValueListItem *leftStickItem = new ValueListItem(
+              "Left Stick",
+              di_items,
+              &menu.LEFT_STICK,
+              "leftStick",
+              left_stick_help);
+          list->addItem(leftStickItem);
+          valueListItems.push_back(leftStickItem);
 
           ValueListItem *oosOffsetItem = new ValueListItem(
               "OOS Offset",
@@ -252,13 +263,13 @@ tsl::elm::Element *GuiMain::createUI() {
           valueListItems.push_back(oosOffsetItem);
 
           for (auto valueListItem : valueListItems) {
-              valueListItem->setStateChangedListener([](std::vector<std::string> menuItems, int* val, std::string extData, std::string title, std::string help) { 
+              valueListItem->setStateChangedListener([](std::vector<std::string> menuItems, int* val, std::string extData, std::string title, std::string help) {
                tsl::changeTo<GuiSublist>(menuItems, val, extData, title, help);
             });
           }
 
           ClickableListItem *saveStateItem = new ClickableListItem(
-              "Save States", 
+              "Save States",
               save_state_items,
               nullptr,
               "saveStates",
