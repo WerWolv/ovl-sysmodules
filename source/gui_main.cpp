@@ -6,7 +6,7 @@
 #include "clickable_list_item.hpp"
 #include "taunt_toggles.hpp"
 
-struct TrainingModpackMenu
+static struct TrainingModpackMenu
 {
   int HITBOX_VIS = true;
   int DI_STATE = NONE;
@@ -20,9 +20,12 @@ struct TrainingModpackMenu
   int MASH_IN_NEUTRAL = false;
 } menu;
 
+static int FRAME_ADVANTAGE = 0;
+
 u64 pidSmash = 0;
 static const char* SYSTEM_SETTINGS_FILE = "/atmosphere/config/system_settings.ini";
 static const char* TRAINING_MOD_LOG = "/TrainingModpack/training_modpack.log";
+static const char* TRAINING_MOD_FRAME_ADV_LOG = "/TrainingModpack/training_modpack_frame_adv.log";
 static const char* TRAINING_MOD_CONF = "/TrainingModpack/training_modpack_menu.conf";
 
 static tsl::hlp::ini::IniData readSettings() {
@@ -117,6 +120,131 @@ GuiMain::~GuiMain() {
     smExit();
 }
 
+static char FrameAdvantage[672];
+
+class FrameAdvantageOverlayFrame : public tsl::elm::OverlayFrame {
+    public:
+        FrameAdvantageOverlayFrame(const std::string& title, const std::string& subtitle) : tsl::elm::OverlayFrame(title, subtitle) {}
+
+        virtual void draw(tsl::gfx::Renderer *renderer) override {
+            renderer->clearScreen();
+
+            renderer->drawRect(0, 0, tsl::cfg::FramebufferWidth, 85, a(tsl::style::color::ColorFrameBackground));
+
+            renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
+            renderer->drawString(this->m_subtitle.c_str(), false, 20, 70, 15, a(tsl::style::color::ColorDescription));
+
+            if (this->m_contentElement != nullptr)
+                this->m_contentElement->frame(renderer);
+        }
+};
+
+class GuiFrameAdvantage : public tsl::Gui {
+public:
+    GuiFrameAdvantage() {
+        tsl::hlp::requestForeground(false);
+        smInitialize();
+        pminfoInitialize();
+        pmbmInitialize();
+        smExit();
+
+        pmdmntGetProcessId(&pidSmash, 0x01006A800016E000);
+
+        Result rc = fsOpenSdCardFileSystem(&this->m_fs);
+        if (R_FAILED(rc))
+            return;
+    }
+
+    ~GuiFrameAdvantage() {
+        smInitialize();
+        pminfoExit();
+        pmbmExit();
+        smExit();
+    }
+
+    virtual tsl::elm::Element* createUI() override {
+        snprintf(FrameAdvantage, 256, "Frame Advantage: %d", FRAME_ADVANTAGE);
+		auto rootFrame = new FrameAdvantageOverlayFrame(FrameAdvantage, "\uE0A2 + \uE07B  Back");
+
+        this->rootFrame = rootFrame;
+
+		return rootFrame;
+	}
+
+	virtual void update() override {
+
+        static u32 counter = 0;
+
+        if (counter++ % 10 != 0)
+            return;
+
+        Result rc;
+        Handle debug;
+
+        if (pidSmash != 0) {
+            rc = svcDebugActiveProcess(&debug, pidSmash);
+            if (R_SUCCEEDED(rc)) {
+                u64 frame_adv_addr = 0;
+                FsFile menuAddrFile;
+                rc = fsFsOpenFile(&this->m_fs, TRAINING_MOD_FRAME_ADV_LOG, FsOpenMode_Read, &menuAddrFile);
+                if (R_FAILED(rc)) {
+                    snprintf(FrameAdvantage, sizeof FrameAdvantage, "Failed to open file with error %d", rc);
+                    rootFrame->setTitle(FrameAdvantage);
+                    svcCloseHandle(debug);
+                    return;
+                }
+
+                char buffer[100];
+                u64 bytesRead;
+                rc = fsFileRead(&menuAddrFile, 0, buffer, 100, FsReadOption_None, &bytesRead);
+                if (R_FAILED(rc)) {
+                    snprintf(FrameAdvantage, sizeof FrameAdvantage, "Failed to read file with error %d", rc);
+                    rootFrame->setTitle(FrameAdvantage);
+                    svcCloseHandle(debug);
+                    return;
+                }
+
+                fsFileClose(&menuAddrFile);
+                buffer[bytesRead] = '\0';
+                frame_adv_addr = strtoul(buffer, NULL, 16);
+
+                if (frame_adv_addr != 0) {
+                    rc = svcReadDebugProcessMemory(&FRAME_ADVANTAGE, debug, frame_adv_addr, sizeof(int));
+                    snprintf(
+                        FrameAdvantage, 
+                        sizeof FrameAdvantage, 
+                        "Frame Advantage: %d", 
+                        FRAME_ADVANTAGE);
+                    rootFrame->setTitle(FrameAdvantage);
+                }
+
+                svcCloseHandle(debug);
+            }
+        } else {
+            snprintf(FrameAdvantage, sizeof FrameAdvantage, "Smash is not running.");
+            rootFrame->setTitle(FrameAdvantage);
+        }
+	}
+    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if (keysHeld & KEY_LSTICK) {
+			if (keysHeld & KEY_RSTICK) {
+				tsl::goBack();
+                tsl::hlp::requestForeground(true);
+				return true;
+			}
+		}
+
+        // intercept B inputs
+        if (keysDown & KEY_B) {
+            return true;
+        }
+		return false;
+    }
+
+    FrameAdvantageOverlayFrame* rootFrame;
+    FsFileSystem m_fs;
+};
+
 tsl::elm::Element *GuiMain::createUI() {
     char buffer[256];
     snprintf(buffer, 256, "Version %s", VERSION);
@@ -160,6 +288,23 @@ tsl::elm::Element *GuiMain::createUI() {
         rc = svcDebugActiveProcess(&debug, pidSmash);
         if (R_SUCCEEDED(rc)) {
           svcCloseHandle(debug);
+
+          ClickableListItem *frameAdvantageItem = new ClickableListItem(
+              "Frame Advantage", 
+              frame_advantage_items,
+              nullptr,
+              "frameAdvantage",
+              0,
+              "Frame Advantage",
+              frame_advantage_help);
+          frameAdvantageItem->setClickListener([] (
+              std::vector<std::string> values, int* curValue, std::string extdata, int index, std::string title, std::string help) {
+            tsl::changeTo<GuiFrameAdvantage>();
+          });
+          frameAdvantageItem->setHelpListener([] (std::string title, std::string help) {
+            tsl::changeTo<GuiHelp>(title, help);
+          });
+          list->addItem(frameAdvantageItem);
 
           ValueListItem *hitboxItem = new ValueListItem(
               "Hitbox Visualization", 

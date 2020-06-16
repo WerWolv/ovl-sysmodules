@@ -4,6 +4,11 @@
 
 #include <vector>
 
+// Frame Advantage
+const std::vector<std::string> frame_advantage_items{""};
+const std::string frame_advantage_help = R""""(
+TODO)"""";
+
 // Side Taunt
 
 // DI
