@@ -7,6 +7,7 @@ using json = nlohmann::json;
 
 constexpr const char *const amsContentsPath = "/atmosphere/contents";
 constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
+constexpr const char *const boot2FlagFolder = "/atmosphere/contents/%016lX/flags";
 
 static char pathBuffer[FS_MAX_PATH];
 
@@ -89,6 +90,10 @@ GuiMain::GuiMain() {
             }
 
             if (click & KEY_Y) {
+                /* if the folder "flags" does not exist, it will be created */
+                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFolder, module.programId);
+                fsFsCreateDirectory(&this->m_fs, pathBuffer);
+
                 std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
