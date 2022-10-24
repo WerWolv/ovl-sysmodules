@@ -73,10 +73,19 @@ GuiMain::GuiMain() {
         };
 
         module.listItem->setClickListener([this, module](u64 click) -> bool {
+            /* if the folder "flags" does not exist, it will be created */
+            std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFolder, module.programId);
+            fsFsCreateDirectory(&this->m_fs, pathBuffer);
+            std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
+
             if (click & HidNpadButton_A && !module.needReboot) {
                 if (this->isRunning(module)) {
                     /* Kill process. */
                     pmshellTerminateProgram(module.programId);
+
+                    /* Remove boot2 flag file. */
+                    if (this->hasFlag(module))
+                        fsFsDeleteFile(&this->m_fs, pathBuffer);
                 } else {
                     /* Start process. */
                     const NcmProgramLocation programLocation{
@@ -85,15 +94,15 @@ GuiMain::GuiMain() {
                     };
                     u64 pid = 0;
                     pmshellLaunchProgram(0, &programLocation, &pid);
+
+                    /* Create boot2 flag file. */
+                    if (!this->hasFlag(module))
+                        fsFsCreateFile(&this->m_fs, pathBuffer, 0, FsCreateOption(0));
                 }
                 return true;
             }
 
             if (click & HidNpadButton_Y) {
-                /* if the folder "flags" does not exist, it will be created */
-                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFolder, module.programId);
-                fsFsCreateDirectory(&this->m_fs, pathBuffer);
-                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
                     fsFsDeleteFile(&this->m_fs, pathBuffer);
